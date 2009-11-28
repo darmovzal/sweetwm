@@ -55,7 +55,6 @@ void process_wm_hints(Window w){
 	wmh = XGetWMHints(dpy, w);
 	if(!wmh) return;
 	f = wmh->flags;
-
 #define WMEVENT(T, F, V) event("ss" T, "window_wmhint", F, V);
 	if(f & InputHint) WMEVENT("b", "input", wmh->input == True ? 1 : 0);
 	if(f & StateHint) WMEVENT("i", "initial_state", (int) wmh->initial_state);
