@@ -19,12 +19,12 @@ typedef lua_Integer lint;
 Display * dpy;
 lua_State * L;
 
-void event(char * format, ...){
+void lua_event(char * format, ...){
 	va_list ap;
 	int count = 0;
 	char * str;
 	
-	lua_getfield(L, LUA_GLOBALSINDEX, "wm");
+	lua_getfield(L, LUA_GLOBALSINDEX, "sweetwm");
 	lua_getfield(L, -1, "event");
 	va_start(ap, format);
 	while(*format){
@@ -55,7 +55,7 @@ void process_wm_hints(Window w){
 	wmh = XGetWMHints(dpy, w);
 	if(!wmh) return;
 	f = wmh->flags;
-#define WMEVENT(T, F, V) event("ss" T, "window_wmhint", F, V);
+#define WMEVENT(T, F, V) lua_event("ss" T, "window_wmhint", F, V);
 	if(f & InputHint) WMEVENT("b", "input", wmh->input == True ? 1 : 0);
 	if(f & StateHint) WMEVENT("i", "initial_state", (int) wmh->initial_state);
 #undef WMEVENT
@@ -71,7 +71,7 @@ void process_size_hints(Window w){
 		XFree(sh);
 		return;
 	}
-#define SHEVENT(X) event("ssi", "window_sizehint", #X, sh->X)
+#define SHEVENT(X) lua_event("ssi", "window_sizehint", #X, sh->X)
 	if(mask & PMinSize){
 		SHEVENT(min_width);
 		SHEVENT(min_height);
@@ -108,7 +108,7 @@ void process_property(Window w, Atom name){
 	
 	XGetWindowProperty(dpy, w, name, 0, 1000, False, AnyPropertyType, &type, &propformat, &propitemcount, &propbytesafter, &value);
 	sname = XGetAtomName(dpy, name);
-#define PEVENT(T, V) event("ss" T, "window_property", sname, V)
+#define PEVENT(T, V) lua_event("ss" T, "window_property", sname, V)
 	switch(type){
 	case XA_STRING:
 	case XA_UTF8_STRING:
@@ -153,7 +153,7 @@ void process_attributes(Window w){
 	XWindowAttributes attributes;
 	
 	XGetWindowAttributes(dpy, w, &attributes);
-#define AEVENT(T, N, V) event("ss" T, "window_attribute", N, V)
+#define AEVENT(T, N, V) lua_event("ss" T, "window_attribute", N, V)
 #define AEVENTI(F) AEVENT("i", #F, (int) attributes.F)
 	AEVENTI(width);
 	AEVENTI(height);
@@ -170,22 +170,22 @@ void process_attributes(Window w){
 }
 
 void process_window(Window w){
-	event("si", "window_begin", (int) w);
+	lua_event("si", "window_begin", (int) w);
 	process_attributes(w);
 	process_properties(w);
 	process_wm_hints(w);
 	process_size_hints(w);
-	event("s", "window_end");
+	lua_event("s", "window_end");
 }
 
-void loop(){
+void x_loop(void){
 	XEvent ev;
 	
 	XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask | FocusChangeMask | KeyPressMask | KeyReleaseMask | EnterWindowMask | LeaveWindowMask | SubstructureNotifyMask | StructureNotifyMask);
 	for(;;){
 		XNextEvent(dpy, &ev);
 		switch(ev.type){
-#define BEVENT(C, N, T) case C: event("ss" T, "X", N
+#define BEVENT(C, N, T) case C: lua_event("ss" T, "X", N
 #define EEVENT ); break;
 #define EVENT(C, N, T) EEVENT BEVENT(C, N, T)
 		BEVENT(KeyPress, "key_press", "i")
@@ -224,7 +224,7 @@ int error_handler(Display * dpy, XErrorEvent * eev){
 	
 	code = (int) eev->error_code;
 	XGetErrorText(dpy, code, msg, ASIZE(msg));
-	event("ssi", "error", msg, code);
+	lua_event("ssi", "error", msg, code);
 	return 0;
 }
 
@@ -309,7 +309,7 @@ LFUNC(process_window){
 void register_functions(void){
 	lua_newtable(L);
 	lua_pushvalue(L, -1);
-	lua_setfield(L, LUA_GLOBALSINDEX, "wm");
+	lua_setfield(L, LUA_GLOBALSINDEX, "sweetwm");
 #define REG(N) lua_pushcfunction(L, lua_##N); lua_setfield(L, -2, #N);
 	REG(move_window)
 	REG(resize_window)
@@ -322,22 +322,42 @@ void register_functions(void){
 	lua_pop(L, 1);
 }
 
+void lua_init(void){
+	L = luaL_newstate();
+	luaL_openlibs(L);
+	register_functions();
+}
+
+void x_init(void){
+	dpy = XOpenDisplay(NULL);
+	if(!dpy) perror("display");
+	XSetErrorHandler(error_handler);
+}
+
+void lua_run(char * filename){
+	(void) luaL_dofile(L, filename);
+}
+
+void lua_destroy(void){
+	lua_close(L);
+}
+
+void x_destroy(void){
+	XCloseDisplay(dpy);
+}
+
 int main(int argc, char ** argv){
 	if(argc != 2){
 		fprintf(stderr, "Usage: %s <handler.lua>\n", argv[0]);
 		fflush(stderr);
 		exit(1);
 	}
-	L = luaL_newstate();
-	luaL_openlibs(L);
-	register_functions();
-	dpy = XOpenDisplay(NULL);
-	if(!dpy) perror("display");
-	XSetErrorHandler(error_handler);
-	(void) luaL_dofile(L, argv[1]);
-	loop(dpy);
-	XCloseDisplay(dpy);
-	lua_close(L);
+	lua_init();
+	x_init();
+	lua_run(argv[1]);
+	x_loop();
+	x_destroy();
+	lua_destroy();
 	return 0;
 }
 

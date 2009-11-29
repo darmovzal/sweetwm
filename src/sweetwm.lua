@@ -1,8 +1,8 @@
-wm.events = {}
-wm.xevents = {}
+sweetwm.events = {}
+sweetwm.xevents = {}
 
-function wm.events.X(name, ...)
-	local handler = wm.xevents[name]
+function sweetwm.events.X(name, ...)
+	local handler = sweetwm.xevents[name]
 	if type(handler) == "function" then
 		handler(...)
 	else
@@ -10,18 +10,18 @@ function wm.events.X(name, ...)
 	end
 end
 
-function wm.xevents.map_request(w)
-	wm.map_window(w)
-	wm.process_window(w)
+function sweetwm.xevents.map_request(w)
+	sweetwm.map_window(w)
+	sweetwm.process_window(w)
 end
 
-function wm.xevents.ConfigureRequest(w, x, y, width, height)
-	wm.move_window(w, x, y)
-	wm.resize_window(w, width, height)
+function sweetwm.xevents.ConfigureRequest(w, x, y, width, height)
+	sweetwm.move_window(w, x, y)
+	sweetwm.resize_window(w, width, height)
 end
 
-function wm.event(name, ...)
-	local handler = wm.events[name]
+function sweetwm.event(name, ...)
+	local handler = sweetwm.events[name]
 	if type(handler) == "function" then
 		handler(...)
 	else
