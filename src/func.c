@@ -153,10 +153,10 @@ void process_property(Window w, Atom name){
 		break;
 	case XA_CARDINAL:
 	case XA_WINDOW:
-		PEVENT("i", (int)(*((Cardinal *) value)));
+		PEVENT("i", (scint)(*((Cardinal *) value)));
 		break;
 	case XA_INTEGER:
-		PEVENT("i", *((int *) value));
+		PEVENT("i", *((scint *) value));
 		break;
 	case XA_ATOM:
 		aname = XGetAtomName(dpy, *((Atom *) value));

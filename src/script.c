@@ -27,7 +27,15 @@ void script_event(char * format, ...){
 	char * str;
 	
 	lua_getfield(L, LUA_GLOBALSINDEX, "sweetwm");
+	if(!lua_istable(L, -1)){
+		fprintf(stderr, "Global sweetwm is not a table");
+		return;
+	}
 	lua_getfield(L, -1, "event");
+	if(!lua_isfunction(L, -1)){
+		fprintf(stderr, "Global sweetwm.event is not a function");
+		return;
+	}
 	va_start(ap, format);
 	while(*format){
 		count++;
