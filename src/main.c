@@ -1,5 +1,7 @@
-//#include <stdlib.h>
-#include <stdio.h>
+#include "common.h"
+#include "script.h"
+#include "x11.h"
+#include "func.h"
 
 
 int main(int argc, char ** argv){
@@ -8,13 +10,13 @@ int main(int argc, char ** argv){
 		fflush(stderr);
 		exit(1);
 	}
-	lua_init();
-	x_init();
+	script_init();
+	x11_init();
 	func_reg();
-	lua_run(argv[1]);
-	x_loop();
-	x_destroy();
-	lua_destroy();
+	script_run(argv[1]);
+	x11_loop();
+	x11_destroy();
+	script_destroy();
 	return 0;
 }
 

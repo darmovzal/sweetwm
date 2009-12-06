@@ -1,11 +1,9 @@
 PROJECT = sweetwm
-CFLAGS = -Wall `pkg-config --cflags lua5.1`
-LDFLAGS = -lX11 `pkg-config --libs lua5.1`
-OBJECTS = lua.o x11.o func.o main.o
+CFLAGS := -Wall -I../include $(shell pkg-config --cflags lua5.1 x11)
+LDFLAGS := -lX11 $(shell pkg-config --libs lua5.1 x11)
+OBJECTS = script.o x11.o func.o main.o
 
-all: build
-
-build: $(PROJECT)
+all: $(PROJECT)
 
 $(PROJECT): $(OBJECTS)
 	gcc $^ $(LDFLAGS) -o $@

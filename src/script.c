@@ -1,25 +1,27 @@
-#include "lua.h"
+#include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
 #include <stdarg.h>
 
 
+typedef lua_Integer scint;
+
 lua_State * L;
 
-void lua_init(void){
+void script_init(void){
 	L = luaL_newstate();
 	luaL_openlibs(L);
 }
 
-void lua_run(char * filename){
+void script_run(char * filename){
 	(void) luaL_dofile(L, filename);
 }
 
-void lua_destroy(void){
+void script_destroy(void){
 	lua_close(L);
 }
 
-void lua_event(char * format, ...){
+void script_event(char * format, ...){
 	va_list ap;
 	int count = 0;
 	char * str;
@@ -38,7 +40,7 @@ void lua_event(char * format, ...){
 				lua_pushnil(L);
 			}
 			break;
-		case 'i': lua_pushinteger(L, va_arg(ap, lint)); break;
+		case 'i': lua_pushinteger(L, (lua_Integer) va_arg(ap, scint)); break;
 		case 'b': lua_pushboolean(L, va_arg(ap, int)); break;
 		default: count--;
 		}

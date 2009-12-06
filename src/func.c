@@ -1,14 +1,27 @@
-#include "lua.h"
-#include "x11.h"
+#include "common.h"
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Intrinsic.h>
+#include <lua.h>
+#include <lauxlib.h>
 
-#define WMEVENT(T, F, V) lua_event("sss" T, "window", "wmhint", F, V);
-#define SHEVENT(X) lua_event("sssi", "window", "sizehint", #X, sh->X)
-#define PEVENT(T, V) lua_event("sss" T, "window", "property", sname, V)
-#define AEVENT(T, N, V) lua_event("sss" T, "window", "attribute", N, V)
+#define WMEVENT(T, F, V) script_event("sss" T, "window", "wmhint", F, V);
+#define SHEVENT(X) script_event("sssi", "window", "sizehint", #X, sh->X)
+#define PEVENT(T, V) script_event("sss" T, "window", "property", sname, V)
+#define AEVENT(T, N, V) script_event("sss" T, "window", "attribute", N, V)
 #define AEVENTI(F) AEVENT("i", #F, (int) attributes.F)
 #define LFUNC(N) int lua_##N(lua_State * L)
 #define REG(N) lua_pushcfunction(L, lua_##N); lua_setfield(L, -2, #N);
 
+#define XA_UTF8_STRING 308
+#define XA_UTF8_STRING_2 232
+
+
+typedef lua_Integer scint;
+void script_event(char * format, ...);
+
+extern Display * dpy;
+extern lua_State * L;
 
 LFUNC(move_window){
 	Window w;
@@ -51,12 +64,12 @@ LFUNC(query_tree){
 	
 	w = (Window) luaL_checkinteger(L, 1);
 	XQueryTree(dpy, w, &root, &parent, &children, &childcount);
-	lua_pushinteger(L, (lint) root);
-	lua_pushinteger(L, (lint) parent);
+	lua_pushinteger(L, (scint) root);
+	lua_pushinteger(L, (scint) parent);
 	lua_newtable(L);
 	for(i = 0; i < childcount; i++){
 		lua_pushinteger(L, i + 1);
-		lua_pushinteger(L, (lint) children[i]);
+		lua_pushinteger(L, (scint) children[i]);
 		lua_settable(L, -3);
 	}
 	XFree(children);
@@ -64,7 +77,7 @@ LFUNC(query_tree){
 }
 
 LFUNC(root){
-	lua_pushinteger(L, (lint) DefaultRootWindow(dpy));
+	lua_pushinteger(L, (scint) DefaultRootWindow(dpy));
 	return 1;
 }
 
@@ -188,12 +201,12 @@ void process_attributes(Window w){
 }
 
 void process_window(Window w){
-	lua_event("si", "window_begin", (int) w);
+	script_event("ssi", "window", "begin", (int) w);
 	process_attributes(w);
 	process_properties(w);
 	process_wm_hints(w);
 	process_size_hints(w);
-	lua_event("s", "window_end");
+	script_event("ss", "window", "end");
 }
 
 LFUNC(process_window){
