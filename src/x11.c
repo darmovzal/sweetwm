@@ -41,8 +41,10 @@ void x11_event(XEvent * ev){
 		,(scint) ev->xkey.keycode
 	EVENT(KeyRelease, "key_release", "i")
 		,(scint) ev->xkey.keycode
-	EVENT(EnterNotify, "enter_notify", "")
-	EVENT(LeaveNotify, "leave_notify", "")
+	EVENT(EnterNotify, "enter_notify", "i")
+		,(scint) ev->xcrossing.window
+	EVENT(LeaveNotify, "leave_notify", "i")
+		,(scint) ev->xcrossing.window
 	EVENT(MapNotify, "map_notify", "")
 	EVENT(UnmapNotify, "unmap_notify", "")
 	EVENT(FocusIn, "focus_in", "")
@@ -68,9 +70,18 @@ void x11_event(XEvent * ev){
 
 void x11_loop(void){
 	XEvent ev;
+	long mask;
 	
 	loop_running = 1;
-	XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask | FocusChangeMask | KeyPressMask | KeyReleaseMask | EnterWindowMask | LeaveWindowMask | SubstructureNotifyMask | StructureNotifyMask);
+	mask |= SubstructureRedirectMask;
+	mask |= FocusChangeMask;
+	mask |= KeyPressMask;
+	mask |= KeyReleaseMask;
+	mask |= EnterWindowMask;
+	mask |= LeaveWindowMask;
+	mask |= SubstructureNotifyMask;
+	mask |= StructureNotifyMask;
+	XSelectInput(dpy, DefaultRootWindow(dpy), mask);
 	while(loop_running){
 		XNextEvent(dpy, &ev);
 		x11_event(&ev);
