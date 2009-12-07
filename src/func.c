@@ -57,6 +57,20 @@ LFUNC(set_border_width){
 	return 0;
 }
 
+LFUNC(set_border_color){
+	Window w;
+	const char * spec;
+	XColor color;
+	int ok = 0;
+	
+	w = (Window) luaL_checkinteger(L, 1);
+	spec = luaL_checkstring(L, 2);
+	if((ok = XParseColor(dpy, DefaultColormap(dpy, 0), spec, &color)))
+		XSetWindowBorder(dpy, w, color.pixel);
+	lua_pushboolean(L, ok);
+	return 1;
+}
+
 LFUNC(query_tree){
 	Window w, root, parent, * children;
 	unsigned int childcount;
@@ -224,6 +238,7 @@ void func_reg(void){
 	REG(move_window)
 	REG(resize_window)
 	REG(set_border_width)
+	REG(set_border_color)
 	REG(query_tree)
 	REG(root)
 	REG(map_window)
