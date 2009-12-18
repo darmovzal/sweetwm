@@ -17,17 +17,25 @@
 #define XA_UTF8_STRING_2 232
 
 
-typedef lua_Integer scint;
-void script_event(char * format, ...);
+#define META_XID "xid"
+
+
 
 extern Display * dpy;
 extern lua_State * L;
+
+void script_event(char * format, ...);
+void lua_pushxid(lua_State * L, XID xid);
+
+XID lua_checkxid(lua_State * L, int index){
+	return *((XID *) luaL_checkudata(L, index, META_XID));
+}
 
 LFUNC(move_window){
 	Window w;
 	int x, y;
 	
-	w = (Window) luaL_checkinteger(L, 1);
+	w = lua_checkxid(L, 1);
 	x = luaL_checkint(L, 2);
 	y = luaL_checkint(L, 3);
 	lua_pop(L, 3);
@@ -39,7 +47,7 @@ LFUNC(resize_window){
 	Window w;
 	int width, height;
 	
-	w = (Window) luaL_checkinteger(L, 1);
+	w = lua_checkxid(L, 1);
 	width = luaL_checkint(L, 2);
 	height = luaL_checkint(L, 3);
 	lua_pop(L, 3);
@@ -51,7 +59,7 @@ LFUNC(set_border_width){
 	Window w;
 	int width;
 	
-	w = (Window) luaL_checkinteger(L, 1);
+	w = lua_checkxid(L, 1);
 	width = luaL_checkint(L, 2);
 	XSetWindowBorderWidth(dpy, w, width);
 	return 0;
@@ -63,7 +71,7 @@ LFUNC(set_border_color){
 	XColor color;
 	int ok = 0;
 	
-	w = (Window) luaL_checkinteger(L, 1);
+	w = lua_checkxid(L, 1);
 	spec = luaL_checkstring(L, 2);
 	if((ok = XParseColor(dpy, DefaultColormap(dpy, 0), spec, &color)))
 		XSetWindowBorder(dpy, w, color.pixel);
@@ -76,14 +84,14 @@ LFUNC(query_tree){
 	unsigned int childcount;
 	int i;
 	
-	w = (Window) luaL_checkinteger(L, 1);
+	w = lua_checkxid(L, 1);
 	XQueryTree(dpy, w, &root, &parent, &children, &childcount);
-	lua_pushinteger(L, (scint) root);
-	lua_pushinteger(L, (scint) parent);
+	lua_pushxid(L, root);
+	lua_pushxid(L, parent);
 	lua_newtable(L);
 	for(i = 0; i < childcount; i++){
 		lua_pushinteger(L, i + 1);
-		lua_pushinteger(L, (scint) children[i]);
+		lua_pushxid(L, children[i]);
 		lua_settable(L, -3);
 	}
 	XFree(children);
@@ -91,14 +99,14 @@ LFUNC(query_tree){
 }
 
 LFUNC(root){
-	lua_pushinteger(L, (scint) DefaultRootWindow(dpy));
+	lua_pushxid(L, DefaultRootWindow(dpy));
 	return 1;
 }
 
 LFUNC(map_window){
 	Window w;
 	
-	w = (Window) luaL_checkinteger(L, 1);
+	w = lua_checkxid(L, 1);
 	XMapWindow(dpy, w);
 	return 0;
 }
@@ -167,10 +175,10 @@ void process_property(Window w, Atom name){
 		break;
 	case XA_CARDINAL:
 	case XA_WINDOW:
-		PEVENT("i", (scint)(*((Cardinal *) value)));
+		PEVENT("x", *((Cardinal *) value));
 		break;
 	case XA_INTEGER:
-		PEVENT("i", *((scint *) value));
+		PEVENT("i", *((int *) value));
 		break;
 	case XA_ATOM:
 		aname = XGetAtomName(dpy, *((Atom *) value));
@@ -226,7 +234,7 @@ void process_window(Window w){
 LFUNC(process_window){
 	Window w;
 	
-	w = (Window) luaL_checkinteger(L, 1);
+	w = lua_checkxid(L, 1);
 	process_window(w);
 	return 0;
 }

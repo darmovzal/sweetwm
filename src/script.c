@@ -2,11 +2,17 @@
 #include <lualib.h>
 #include <lauxlib.h>
 #include <stdarg.h>
+#include <X11/Xlib.h>
 
-
-typedef lua_Integer scint;
+#define META_XID "xid"
 
 lua_State * L;
+
+void lua_pushxid(lua_State * L, XID xid){
+	*((XID *) lua_newuserdata(L, sizeof(XID))) = xid;
+	luaL_newmetatable(L, META_XID);
+	lua_setmetatable(L, -2);
+}
 
 void script_init(void){
 	L = luaL_newstate();
@@ -48,8 +54,15 @@ void script_event(char * format, ...){
 				lua_pushnil(L);
 			}
 			break;
-		case 'i': lua_pushinteger(L, (lua_Integer) va_arg(ap, scint)); break;
-		case 'b': lua_pushboolean(L, va_arg(ap, int)); break;
+		case 'i':
+			lua_pushinteger(L, (lua_Integer) va_arg(ap, int));
+			break;
+		case 'b':
+			lua_pushboolean(L, va_arg(ap, int));
+			break;
+		case 'x':
+			lua_pushxid(L, va_arg(ap, XID));
+			break;
 		default: count--;
 		}
 	}
