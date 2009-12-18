@@ -13,7 +13,7 @@ clean:
 	cd src; make clean
 
 run: build
-	src/$(PROJECT) $(PROJECT).lua
+	src/$(PROJECT) $(PROJECT).lua || sleep 1000
 
 server: build
 	Xephyr -screen 1280x780 :1 &
