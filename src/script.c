@@ -1,10 +1,8 @@
-#include <lua.h>
+#include "sweetwm.h"
 #include <lualib.h>
 #include <lauxlib.h>
 #include <stdarg.h>
-#include <X11/Xlib.h>
 
-#define META_XID "xid"
 
 lua_State * L;
 
@@ -12,6 +10,10 @@ void lua_pushxid(lua_State * L, XID xid){
 	*((XID *) lua_newuserdata(L, sizeof(XID))) = xid;
 	luaL_newmetatable(L, META_XID);
 	lua_setmetatable(L, -2);
+}
+
+XID lua_checkxid(lua_State * L, int index){
+	return *((XID *) luaL_checkudata(L, index, META_XID));
 }
 
 void script_init(void){

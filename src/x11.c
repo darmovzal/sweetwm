@@ -1,11 +1,4 @@
-#include "common.h"
-#include "x11.h"
-#include <X11/X.h>
-#include <X11/Xatom.h>
-#include <X11/Intrinsic.h>
-
-
-void script_event(char * format, ...);
+#include "sweetwm.h"
 
 
 Display * dpy;
@@ -17,7 +10,7 @@ int error_handler(Display * dpy, XErrorEvent * eev){
 	
 	code = (int) eev->error_code;
 	XGetErrorText(dpy, code, msg, ASIZE(msg));
-	script_event("ssi", "error", msg, code);
+	script_event("ssi", "xerror", msg, code);
 	return 0;
 }
 

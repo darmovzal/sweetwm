@@ -1,7 +1,4 @@
-#include "common.h"
-#include "script.h"
-#include "x11.h"
-#include "func.h"
+#include "sweetwm.h"
 
 
 int main(int argc, char ** argv){

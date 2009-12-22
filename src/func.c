@@ -1,8 +1,6 @@
-#include "common.h"
-#include <X11/Xlib.h>
+#include "sweetwm.h"
 #include <X11/Xatom.h>
 #include <X11/Intrinsic.h>
-#include <lua.h>
 #include <lauxlib.h>
 
 #define WMEVENT(T, F, V) script_event("sss" T, "window", "wmhint", F, V);
@@ -16,20 +14,6 @@
 #define XA_UTF8_STRING 308
 #define XA_UTF8_STRING_2 232
 
-
-#define META_XID "xid"
-
-
-
-extern Display * dpy;
-extern lua_State * L;
-
-void script_event(char * format, ...);
-void lua_pushxid(lua_State * L, XID xid);
-
-XID lua_checkxid(lua_State * L, int index){
-	return *((XID *) luaL_checkudata(L, index, META_XID));
-}
 
 LFUNC(move_window){
 	Window w;
