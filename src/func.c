@@ -53,12 +53,15 @@ LFUNC(set_border_color){
 	Window w;
 	const char * spec;
 	XColor color;
-	int ok = 0;
+	int ok;
+	long pixel;
 	
 	w = lua_checkxid(L, 1);
 	spec = luaL_checkstring(L, 2);
-	if((ok = XParseColor(dpy, DefaultColormap(dpy, 0), spec, &color)))
-		XSetWindowBorder(dpy, w, color.pixel);
+	if((ok = XParseColor(dpy, DefaultColormap(dpy, 0), spec, &color))){
+		pixel = ((color.red >> 8) << 16) | ((color.green >> 8) << 8) | (color.blue >> 8);
+		XSetWindowBorder(dpy, w, pixel);
+	}
 	lua_pushboolean(L, ok);
 	return 1;
 }
