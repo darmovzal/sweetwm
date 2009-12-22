@@ -12,14 +12,11 @@ arch: clean
 clean:
 	cd src; make clean
 
-run: build
-	src/$(PROJECT) $(PROJECT).lua || sleep 1000
-
 server: build
 	Xephyr -screen 1280x780 :1 &
 	sleep 1
 	DISPLAY=:1 xterm -geometry 105x29+0+0 &
-	DISPLAY=:1 xterm -geometry 105x59+640+0 -e make run
+	DISPLAY=:1 xterm -geometry 105x59+640+0 -e "src/$(PROJECT) $(PROJECT).lua || sleep 1000"
 	pkill Xephyr
 
 
