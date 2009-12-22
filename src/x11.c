@@ -62,7 +62,7 @@ void x11_event(XEvent * ev){
 
 void x11_loop(void){
 	XEvent ev;
-	long mask;
+	long mask = 0;
 	
 	loop_running = 1;
 	mask |= SubstructureRedirectMask;
