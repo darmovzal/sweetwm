@@ -26,7 +26,7 @@ void x11_destroy(void){
 
 void x11_event(XEvent * ev){
 	switch(ev->type){
-#define BEVENT(C, N, T) case C: script_event("ss" T, "xevent", N
+#define BEVENT(C, N, T) case C: script_event("s" T, N
 #define EEVENT ); break;
 #define EVENT(C, N, T) EEVENT BEVENT(C, N, T)
 	BEVENT(KeyPress, "key_press", "i")
