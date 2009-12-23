@@ -3,23 +3,25 @@
 #include <X11/Intrinsic.h>
 #include <lauxlib.h>
 
-#define WMEVENT(T, F, V) script_event("sss" T, "window", "wmhint", F, V);
-#define SHEVENT(X) script_event("sssi", "window", "sizehint", #X, sh->X)
-#define PEVENT(T, V) script_event("sss" T, "window", "property", sname, V)
-#define AEVENT(T, N, V) script_event("sss" T, "window", "attribute", N, V)
-#define AEVENTI(F) AEVENT("i", #F, (int) attributes.F)
-#define LFUNC(N) int lua_##N(lua_State * L)
-#define REG(N) lua_pushcfunction(L, lua_##N); lua_setfield(L, -2, #N);
-
 #define XA_UTF8_STRING 308
 #define XA_UTF8_STRING_2 232
 
+#define LFUNC(N) int lua_##N(lua_State * L)
+
+
+Screen * get_screen(int num){
+	Screen * ret;
+	
+	ret = XScreenOfDisplay(dpy, num);
+	if(!ret) luaL_error(L, "No screen of number %d", num);
+	return ret;
+}
 
 LFUNC(move_window){
 	Window w;
 	int x, y;
 	
-	w = lua_checkxid(L, 1);
+	w = lua_checkwindow(L, 1);
 	x = luaL_checkint(L, 2);
 	y = luaL_checkint(L, 3);
 	lua_pop(L, 3);
@@ -31,7 +33,7 @@ LFUNC(resize_window){
 	Window w;
 	int width, height;
 	
-	w = lua_checkxid(L, 1);
+	w = lua_checkwindow(L, 1);
 	width = luaL_checkint(L, 2);
 	height = luaL_checkint(L, 3);
 	lua_pop(L, 3);
@@ -43,7 +45,7 @@ LFUNC(set_border_width){
 	Window w;
 	int width;
 	
-	w = lua_checkxid(L, 1);
+	w = lua_checkwindow(L, 1);
 	width = luaL_checkint(L, 2);
 	XSetWindowBorderWidth(dpy, w, width);
 	return 0;
@@ -56,8 +58,13 @@ LFUNC(set_border_color){
 	int ok;
 	long pixel;
 	
-	w = lua_checkxid(L, 1);
+	w = lua_checkwindow(L, 1);
 	spec = luaL_checkstring(L, 2);
+/*
+{
+XLookupColor(dpy, DefaultColormap(dpy, 0),
+}
+*/
 	if((ok = XParseColor(dpy, DefaultColormap(dpy, 0), spec, &color))){
 		pixel = ((color.red >> 8) << 16) | ((color.green >> 8) << 8) | (color.blue >> 8);
 		XSetWindowBorder(dpy, w, pixel);
@@ -71,29 +78,37 @@ LFUNC(query_tree){
 	unsigned int childcount;
 	int i;
 	
-	w = lua_checkxid(L, 1);
+	w = lua_checkwindow(L, 1);
 	XQueryTree(dpy, w, &root, &parent, &children, &childcount);
-	lua_pushxid(L, root);
-	lua_pushxid(L, parent);
+	lua_pushwindow(L, root);
+	lua_pushwindow(L, parent);
 	lua_newtable(L);
 	for(i = 0; i < childcount; i++){
 		lua_pushinteger(L, i + 1);
-		lua_pushxid(L, children[i]);
+		lua_pushwindow(L, children[i]);
 		lua_settable(L, -3);
 	}
 	XFree(children);
 	return 3;
 }
 
-LFUNC(root){
-	lua_pushxid(L, DefaultRootWindow(dpy));
+LFUNC(get_screen_count){
+	lua_pushinteger(L, ScreenCount(dpy));
+	return 1;
+}
+
+LFUNC(get_root_window){
+	int screen;
+	
+	screen = luaL_checkint(L, 1);
+	lua_pushwindow(L, RootWindow(dpy, screen));
 	return 1;
 }
 
 LFUNC(map_window){
 	Window w;
 	
-	w = lua_checkxid(L, 1);
+	w = lua_checkwindow(L, 1);
 	XMapWindow(dpy, w);
 	return 0;
 }
@@ -105,8 +120,10 @@ void process_wm_hints(Window w){
 	wmh = XGetWMHints(dpy, w);
 	if(!wmh) return;
 	f = wmh->flags;
-	if(f & InputHint) WMEVENT("b", "input", wmh->input == True ? 1 : 0);
-	if(f & StateHint) WMEVENT("i", "initial_state", (int) wmh->initial_state);
+#define WMCALL(T, F, V) lua_dup(L); lua_fcall(L, "ss" T, "wmhint", F, V);
+	if(f & InputHint) WMCALL("b", "input", wmh->input == True ? 1 : 0);
+	if(f & StateHint) WMCALL("i", "initial_state", (int) wmh->initial_state);
+#undef WMCALL
 	XFree(wmh);
 }
 
@@ -119,29 +136,31 @@ void process_size_hints(Window w){
 		XFree(sh);
 		return;
 	}
+#define SHCALL(X) lua_dup(L); lua_fcall(L, "ssi", "sizehint", #X, sh->X)
 	if(mask & PMinSize){
-		SHEVENT(min_width);
-		SHEVENT(min_height);
+		SHCALL(min_width);
+		SHCALL(min_height);
 	}
 	if(mask & PMaxSize){
-		SHEVENT(max_width);
-		SHEVENT(max_height);
+		SHCALL(max_width);
+		SHCALL(max_height);
 	}
 	if(mask & PResizeInc){
-		SHEVENT(width_inc);
-		SHEVENT(height_inc);
+		SHCALL(width_inc);
+		SHCALL(height_inc);
 	}
 	if(mask & PAspect){
-		SHEVENT(min_aspect.x);
-		SHEVENT(min_aspect.y);
-		SHEVENT(max_aspect.x);
-		SHEVENT(max_aspect.y);
+		SHCALL(min_aspect.x);
+		SHCALL(min_aspect.y);
+		SHCALL(max_aspect.x);
+		SHCALL(max_aspect.y);
 	}
 	if(mask & PBaseSize){
-		SHEVENT(base_width);
-		SHEVENT(base_height);
+		SHCALL(base_width);
+		SHCALL(base_height);
 	}
-	if(mask & PWinGravity) SHEVENT(win_gravity);
+	if(mask & PWinGravity) SHCALL(win_gravity);
+#undef SHCALL
 	XFree(sh);
 }
 
@@ -154,22 +173,25 @@ void process_property(Window w, Atom name){
 	
 	XGetWindowProperty(dpy, w, name, 0, 1000, False, AnyPropertyType, &type, &propformat, &propitemcount, &propbytesafter, &value);
 	sname = XGetAtomName(dpy, name);
+#define PCALL(T, V) lua_dup(L); lua_fcall(L, "ss" T, "property", sname, V)
 	switch(type){
 	case XA_STRING:
 	case XA_UTF8_STRING:
 	case XA_UTF8_STRING_2:
-		PEVENT("s", value);
+		PCALL("s", value);
+		break;
+	case XA_WINDOW:
+		PCALL("w", *((Window *) value));
 		break;
 	case XA_CARDINAL:
-	case XA_WINDOW:
-		PEVENT("x", *((Cardinal *) value));
+		PCALL("i", (int)(*((Cardinal *) value)));
 		break;
 	case XA_INTEGER:
-		PEVENT("i", *((int *) value));
+		PCALL("i", *((int *) value));
 		break;
 	case XA_ATOM:
 		aname = XGetAtomName(dpy, *((Atom *) value));
-		PEVENT("s", aname);
+		PCALL("s", aname);
 		XFree(aname);
 		break;
 	case XA_WM_HINTS:
@@ -177,8 +199,9 @@ void process_property(Window w, Atom name){
 	case XA_WM_SIZE_HINTS:
 		break;
 	default:
-		PEVENT("s", NULL);
+		PCALL("s", NULL);
 	}
+#undef PCALL
 	XFree(sname);
 	XFree(value);
 }
@@ -197,47 +220,66 @@ void process_attributes(Window w){
 	XWindowAttributes attributes;
 	
 	XGetWindowAttributes(dpy, w, &attributes);
-	AEVENTI(width);
-	AEVENTI(height);
-	AEVENTI(x);
-	AEVENTI(y);
-	AEVENTI(border_width);
-	AEVENTI(depth);
-	AEVENTI(root);
-	AEVENT("s", "class", attributes.class == InputOutput ? "InputOutput" : "Input");
-	AEVENTI(bit_gravity);
-	AEVENTI(win_gravity);
+#define ACALL(T, N, V) lua_dup(L); lua_fcall(L, "ss" T, "attribute", N, V)
+#define ACALLI(F) ACALL("i", #F, (int) attributes.F)
+	ACALLI(width);
+	ACALLI(height);
+	ACALLI(x);
+	ACALLI(y);
+	ACALLI(border_width);
+	ACALLI(depth);
+	ACALL("w", "root", attributes.root);
+	ACALL("s", "class", attributes.class == InputOutput ? "InputOutput" : "Input");
+	ACALLI(bit_gravity);
+	ACALLI(win_gravity);
+#undef ACALL
+#undef ACALLI
 }
 
 void process_window(Window w){
-	script_event("ssi", "window", "begin", (int) w);
 	process_attributes(w);
 	process_properties(w);
 	process_wm_hints(w);
 	process_size_hints(w);
-	script_event("ss", "window", "end");
 }
 
 LFUNC(process_window){
 	Window w;
 	
-	w = lua_checkxid(L, 1);
+	w = lua_checkwindow(L, 1);
+	luaL_checktype(L, 2, LUA_TFUNCTION);
 	process_window(w);
+	lua_pop(L, 2);
 	return 0;
+}
+
+LFUNC(get_screen_size){
+	Screen * screen;
+	
+	screen = get_screen(luaL_checkint(L, 1));
+	lua_pushinteger(L, XWidthOfScreen(screen));
+	lua_pushinteger(L, XHeightOfScreen(screen));
+	lua_pushinteger(L, XWidthMMOfScreen(screen));
+	lua_pushinteger(L, XHeightMMOfScreen(screen));
+	return 4;
 }
 
 void func_reg(void){
 	lua_newtable(L);
 	lua_pushvalue(L, -1);
 	lua_setfield(L, LUA_GLOBALSINDEX, "sweetwm");
+#define REG(N) lua_pushcfunction(L, lua_##N); lua_setfield(L, -2, #N);
 	REG(move_window)
 	REG(resize_window)
 	REG(set_border_width)
 	REG(set_border_color)
 	REG(query_tree)
-	REG(root)
+	REG(get_screen_count)
+	REG(get_root_window)
 	REG(map_window)
 	REG(process_window)
+	REG(get_screen_size)
+#undef REG
 	lua_pop(L, 1);
 }
 
