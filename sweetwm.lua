@@ -1,7 +1,7 @@
 sweetwm.events = {
 	xevent = {
 		map_request = function(id)
-			sweetwm.process_window(id)
+			sweetwm.process_window(id, print)
 			local window = sweetwm.window
 			sweetwm.windows[id] = window
 			sweetwm.window = nil
@@ -36,6 +36,7 @@ sweetwm.events = {
 		key_release = function(key)
 		end,
 	},
+--[[
 	window = {
 		begin = function(w)
 			sweetwm.window = {
@@ -60,6 +61,7 @@ sweetwm.events = {
 		end,
 		["end"] = function() end
 	}
+]]
 }
 
 sweetwm.windows = {}
@@ -92,4 +94,11 @@ end
 function sweetwm.get_window_size(window)
 	return window.attributes.x + 50, window.attributes.y + 50, window.attributes.width, window.attributes.height
 end
+
+for n, v in pairs(sweetwm) do
+	print(n, v)
+end
+print("Screens:")
+print(sweetwm.get_screen_size(0))
+
 
