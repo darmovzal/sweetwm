@@ -6,14 +6,14 @@
 
 lua_State * L;
 
-void lua_pushxid(lua_State * L, XID xid){
-	*((XID *) lua_newuserdata(L, sizeof(XID))) = xid;
-	luaL_newmetatable(L, META_XID);
+void lua_pushwindow(lua_State * L, Window w){
+	*((Window *) lua_newuserdata(L, sizeof(Window))) = w;
+	luaL_newmetatable(L, META_WINDOW);
 	lua_setmetatable(L, -2);
 }
 
-XID lua_checkxid(lua_State * L, int index){
-	return *((XID *) luaL_checkudata(L, index, META_XID));
+Window lua_checkwindow(lua_State * L, int index){
+	return *((Window *) luaL_checkudata(L, index, META_WINDOW));
 }
 
 void script_init(void){
@@ -29,25 +29,11 @@ void script_destroy(void){
 	lua_close(L);
 }
 
-void script_event(char * format, ...){
-	va_list ap;
-	int count = 0;
-	char * str;
+void script_args(lua_State * L, char * format, va_list ap){
+	char c, * str;
 	
-	lua_getfield(L, LUA_GLOBALSINDEX, "sweetwm");
-	if(!lua_istable(L, -1)){
-		fprintf(stderr, "Global sweetwm is not a table");
-		return;
-	}
-	lua_getfield(L, -1, "event");
-	if(!lua_isfunction(L, -1)){
-		fprintf(stderr, "Global sweetwm.event is not a function");
-		return;
-	}
-	va_start(ap, format);
-	while(*format){
-		count++;
-		switch(*format++){
+	while((c = *(format++))){
+		switch(c){
 		case 's':
 			str = va_arg(ap, char *);
 			if(str){
@@ -62,14 +48,41 @@ void script_event(char * format, ...){
 		case 'b':
 			lua_pushboolean(L, va_arg(ap, int));
 			break;
-		case 'x':
-			lua_pushxid(L, va_arg(ap, XID));
+		case 'w':
+			lua_pushwindow(L, va_arg(ap, Window));
 			break;
-		default: count--;
+		default:
+			luaL_error(L, "Unknown argument type `%c'", c);
 		}
 	}
+}
+
+void lua_fcall(lua_State * L, char * format, ...){
+	va_list ap;
+	
+	va_start(ap, format);
+	script_args(L, format, ap);
+	lua_call(L, strlen(format), 0);
 	va_end(ap);
-	lua_call(L, count, 0);
+}
+
+void script_event(char * format, ...){
+	va_list ap;
+	
+	lua_getfield(L, LUA_GLOBALSINDEX, "sweetwm");
+	if(!lua_istable(L, -1)){
+		fprintf(stderr, "Global sweetwm is not a table");
+		return;
+	}
+	lua_getfield(L, -1, "event");
+	if(!lua_isfunction(L, -1)){
+		fprintf(stderr, "Global sweetwm.event is not a function");
+		return;
+	}
+	va_start(ap, format);
+	script_args(L, format, ap);
+	lua_call(L, strlen(format), 0);
+	va_end(ap);
 	lua_pop(L, 1);
 }
 
