@@ -22,7 +22,11 @@ void script_init(void){
 }
 
 void script_run(char * filename){
-	(void) luaL_dofile(L, filename);
+	char buf[1000];
+	
+	snprintf(buf, ASIZE(buf), "dofile('%s')", filename);
+	luaL_loadstring(L, buf);
+	lua_call(L, 0, LUA_MULTRET);
 }
 
 void script_destroy(void){
