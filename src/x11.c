@@ -33,9 +33,9 @@ void x11_event(XEvent * ev){
 		,(int) ev->xkey.keycode
 	EVENT(KeyRelease, "key_release", "i")
 		,(int) ev->xkey.keycode
-	EVENT(EnterNotify, "enter_notify", "x")
+	EVENT(EnterNotify, "enter_notify", "w")
 		,ev->xcrossing.window
-	EVENT(LeaveNotify, "leave_notify", "x")
+	EVENT(LeaveNotify, "leave_notify", "w")
 		,ev->xcrossing.window
 	EVENT(MapNotify, "map_notify", "")
 	EVENT(UnmapNotify, "unmap_notify", "")
@@ -43,10 +43,10 @@ void x11_event(XEvent * ev){
 	EVENT(FocusOut, "focus_out", "")
 	EVENT(CreateNotify, "create_notify", "")
 	EVENT(DestroyNotify, "destroy_notify", "")
-	EVENT(MapRequest, "map_request", "x")
+	EVENT(MapRequest, "map_request", "w")
 		,ev->xmaprequest.window
 	EVENT(ReparentNotify, "reparent_notify", "")
-	EVENT(ConfigureRequest, "configure_request", "xiiii")
+	EVENT(ConfigureRequest, "configure_request", "wiiii")
 		,ev->xconfigurerequest.window
 		,(int) ev->xconfigurerequest.x
 		,(int) ev->xconfigurerequest.y
@@ -66,36 +66,17 @@ void x11_loop(void){
 	
 	loop_running = 1;
 	mask |= SubstructureRedirectMask;
-	mask |= FocusChangeMask;
-	mask |= KeyPressMask;
-	mask |= KeyReleaseMask;
-	mask |= EnterWindowMask;
-	mask |= LeaveWindowMask;
 	mask |= SubstructureNotifyMask;
 	mask |= StructureNotifyMask;
+	mask |= FocusChangeMask;
+	mask |= KeyPressMask | KeyReleaseMask;
+	mask |= EnterWindowMask | LeaveWindowMask;
+	mask |= ButtonPressMask | ButtonReleaseMask;
+	mask |= PointerMotionMask | Button1MotionMask | Button2MotionMask | Button3MotionMask | Button4MotionMask | Button5MotionMask | ButtonMotionMask;
+	mask |= ExposureMask;
+	mask |= ResizeRedirectMask;
+	mask |= PropertyChangeMask;
 	XSelectInput(dpy, DefaultRootWindow(dpy), mask);
-/*
-	XSelectInput(dpy, 0, mask);
-    attr.event_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask |
-               ButtonReleaseMask | EnterWindowMask |
-               LeaveWindowMask | PointerMotionMask |
-               Button1MotionMask |
-               Button2MotionMask | Button3MotionMask |
-               Button4MotionMask | Button5MotionMask |
-               ButtonMotionMask | KeymapStateMask |
-               ExposureMask | VisibilityChangeMask |
-               StructureNotifyMask |  ResizeRedirectMask |
-               SubstructureNotifyMask | SubstructureRedirectMask |
-               FocusChangeMask | PropertyChangeMask |
-               ColormapChangeMask | OwnerGrabButtonMask;
-
-    if (w) {
-    XGetWindowAttributes(dpy, w, &wattr);
-    if (wattr.all_event_masks & ButtonPressMask)
-        attr.event_mask &= ~ButtonPressMask;
-    attr.event_mask &= ~SubstructureRedirectMask;
-    XSelectInput(dpy, w, attr.event_mask);
-*/
 	while(loop_running){
 		XNextEvent(dpy, &ev);
 		x11_event(&ev);
