@@ -1,6 +1,6 @@
 PROJECT = sweetwm
 
-all: build
+all: run
 
 build:
 	cd src; make
@@ -12,7 +12,7 @@ arch: clean
 clean:
 	cd src; make clean
 
-server: build
+run: build
 	Xephyr -screen 1280x780 :1 &
 	sleep 1
 	DISPLAY=:1 xterm -geometry 105x29+0+0 &
