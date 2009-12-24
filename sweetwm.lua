@@ -26,6 +26,7 @@ sweetwm.events = {
 	configure_notify = function()
 	end,
 	key_press = function(key)
+		print("Key", key)
 	end,
 	key_release = function(key)
 	end,
@@ -36,24 +37,8 @@ function sweetwm.error(...)
 end
 
 function sweetwm.event(name, ...)
-	local function f(t, name, ...)
-		if name == nil then
-			sweetwm.error("Event name undefined")
-			return
-		end
-		local h = t[name]
-		if type(h) == "function" then
-			h(...)
-		elseif type(h) == "table" then
-			f(h, ...)
-		else
-			sweetwm.error("Unhandled event: ", name, ...)
-		end
-	end
-	local ok, errmsg = pcall(f, sweetwm.events, name, ...)
-	if not ok then
-		sweetwm.error(errmsg)
-	end
+	local f = sweetwm.events[name]
+	if f then f(...) end
 end
 
 function sweetwm.get_window(id)
