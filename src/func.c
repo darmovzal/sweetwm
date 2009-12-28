@@ -113,21 +113,31 @@ LFUNC(map_window){
 	return 0;
 }
 
-void process_wm_hints(Window w){
+void wm_hints(Window w){
 	XWMHints * wmh;
 	long f;
 	
 	wmh = XGetWMHints(dpy, w);
 	if(!wmh) return;
 	f = wmh->flags;
-#define WMCALL(T, F, V) lua_dup(L); lua_fcall(L, "ss" T, "wmhint", F, V);
+#define WMCALL(T, F, V) lua_dup(L); lua_fcall(L, "s" T, F, V);
 	if(f & InputHint) WMCALL("b", "input", wmh->input == True ? 1 : 0);
 	if(f & StateHint) WMCALL("i", "initial_state", (int) wmh->initial_state);
 #undef WMCALL
 	XFree(wmh);
 }
 
-void process_size_hints(Window w){
+LFUNC(wm_hints){
+	Window w;
+	
+	w = lua_checkwindow(L, 1);
+	luaL_checktype(L, 2, LUA_TFUNCTION);
+	wm_hints(w);
+	lua_pop(L, 2);
+	return 0;
+}
+
+void size_hints(Window w){
 	XSizeHints * sh;
 	long mask = 0;
 	
@@ -136,7 +146,7 @@ void process_size_hints(Window w){
 		XFree(sh);
 		return;
 	}
-#define SHCALL(X) lua_dup(L); lua_fcall(L, "ssi", "sizehint", #X, sh->X)
+#define SHCALL(X) lua_dup(L); lua_fcall(L, "si", #X, sh->X)
 	if(mask & PMinSize){
 		SHCALL(min_width);
 		SHCALL(min_height);
@@ -164,7 +174,17 @@ void process_size_hints(Window w){
 	XFree(sh);
 }
 
-void process_property(Window w, Atom name){
+LFUNC(size_hints){
+	Window w;
+	
+	w = lua_checkwindow(L, 1);
+	luaL_checktype(L, 2, LUA_TFUNCTION);
+	size_hints(w);
+	lua_pop(L, 2);
+	return 0;
+}
+
+void property(Window w, Atom name){
 	Atom type;
 	int propformat;
 	unsigned long propitemcount, propbytesafter;
@@ -173,7 +193,7 @@ void process_property(Window w, Atom name){
 	
 	XGetWindowProperty(dpy, w, name, 0, 1000, False, AnyPropertyType, &type, &propformat, &propitemcount, &propbytesafter, &value);
 	sname = XGetAtomName(dpy, name);
-#define PCALL(T, V) lua_dup(L); lua_fcall(L, "ss" T, "property", sname, V)
+#define PCALL(T, V) lua_dup(L); lua_fcall(L, "s" T, sname, V)
 	switch(type){
 	case XA_STRING:
 	case XA_UTF8_STRING:
@@ -206,21 +226,31 @@ void process_property(Window w, Atom name){
 	XFree(value);
 }
 
-void process_properties(Window w){
+void properties(Window w){
 	int propcount, i;
 	Atom * propnames;
 	
 	propnames = XListProperties(dpy, w, &propcount);
 	for(i = 0; i < propcount; i++)
-		process_property(w, propnames[i]);
+		property(w, propnames[i]);
 	XFree(propnames);
 }
 
-void process_attributes(Window w){
+LFUNC(properties){
+	Window w;
+	
+	w = lua_checkwindow(L, 1);
+	luaL_checktype(L, 2, LUA_TFUNCTION);
+	properties(w);
+	lua_pop(L, 2);
+	return 0;
+}
+
+void attributes(Window w){
 	XWindowAttributes attributes;
 	
 	XGetWindowAttributes(dpy, w, &attributes);
-#define ACALL(T, N, V) lua_dup(L); lua_fcall(L, "ss" T, "attribute", N, V)
+#define ACALL(T, N, V) lua_dup(L); lua_fcall(L, "s" T, N, V)
 #define ACALLI(F) ACALL("i", #F, (int) attributes.F)
 	ACALLI(width);
 	ACALLI(height);
@@ -236,19 +266,12 @@ void process_attributes(Window w){
 #undef ACALLI
 }
 
-void process_window(Window w){
-	process_attributes(w);
-	process_properties(w);
-	process_wm_hints(w);
-	process_size_hints(w);
-}
-
-LFUNC(process_window){
+LFUNC(attributes){
 	Window w;
 	
 	w = lua_checkwindow(L, 1);
 	luaL_checktype(L, 2, LUA_TFUNCTION);
-	process_window(w);
+	attributes(w);
 	lua_pop(L, 2);
 	return 0;
 }
@@ -277,7 +300,10 @@ void func_reg(void){
 	REG(get_screen_count)
 	REG(get_root_window)
 	REG(map_window)
-	REG(process_window)
+	REG(attributes)
+	REG(properties)
+	REG(wm_hints)
+	REG(size_hints)
 	REG(get_screen_size)
 #undef REG
 	lua_pop(L, 1);

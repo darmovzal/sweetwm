@@ -41,42 +41,13 @@ function sweetwm.event(name, ...)
 	if f then f(...) end
 end
 
-function sweetwm.get_window(id)
-	local window = {
-		attributes = {},
-		properties = {},
-		wmhints = {},
-		sizehints = {}
-	}
-	local callbacks = {
-		attribute = function(name, value)
-			window.attributes[name] = value
-		end,
-		property = function(name, value)
-			window.properties[name] = value
-		end,
-		wmhint = function(name, value)
-			window.wmhints[name] = value
-		end,
-		sizehint = function(name, value)
-			window.sizehints[name] = value
-		end,
-		}
-	sweetwm.process_window(id, function(event, ...)
-		callbacks[event](...)
-	end)
-	return window
-end
-
 function sweetwm.get_window_size(id)
-	local window = sweetwm.get_window(id)
-	local root = sweetwm.get_window(window.attributes.root)
-	local x = window.attributes.x
-	local y = window.attributes.y
-	local w = window.attributes.width
-	local h = window.attributes.height
-	local rw = root.attributes.width
-	local rh = root.attributes.height
+	local watts = {}
+	sweetwm.attributes(id, function(n, v) watts[n] = v end)
+	local ratts = {}
+	sweetwm.attributes(watts.root, function(n, v) ratts[n] = v end)
+	local x, y, w, h = watts.x, watts.y, watts.width, watts.height
+	local rw, rh = ratts.width, ratts.height
 	if x == 0 and y == 0 then
 		x = (rw - w) / 2
 		y = (rh - h) / 2
