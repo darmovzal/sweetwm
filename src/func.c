@@ -51,24 +51,49 @@ LFUNC(set_border_width){
 	return 0;
 }
 
+double clamp(double d){
+	if(d < 0) return 0;
+	if(d > 1) return 1;
+	return d;
+}
+
+int get_pixel(unsigned long * ret, const char * name, double r, double g, double b){
+	XColor color;
+	Colormap cmap;
+	
+	cmap = DefaultColormap(dpy, 0);
+	if(name){
+		if(!XParseColor(dpy, cmap, name, &color)) return 0;
+	} else {
+#define SCALE(V) ((unsigned short)(clamp(V) * 65535))
+		color.red = SCALE(r);
+		color.green = SCALE(g);
+		color.blue = SCALE(b);
+#undef SCALE
+	}
+	if(!XAllocColor(dpy, cmap, &color)) return 0;
+	*ret = color.pixel;
+	return 1;
+}
+
 LFUNC(set_border_color){
 	Window w;
-	const char * spec;
-	XColor color;
+	const char * name = NULL;
+	double r, g, b;
 	int ok;
-	long pixel;
+	unsigned long pixel;
 	
 	w = lua_checkwindow(L, 1);
-	spec = luaL_checkstring(L, 2);
-/*
-{
-XLookupColor(dpy, DefaultColormap(dpy, 0),
-}
-*/
-	if((ok = XParseColor(dpy, DefaultColormap(dpy, 0), spec, &color))){
-		pixel = ((color.red >> 8) << 16) | ((color.green >> 8) << 8) | (color.blue >> 8);
-		XSetWindowBorder(dpy, w, pixel);
+	luaL_checkany(L, 2);
+	if(lua_type(L, 2) == LUA_TSTRING){
+		name = luaL_checkstring(L, 2);
+	} else {
+		r = luaL_checknumber(L, 2);
+		g = luaL_checknumber(L, 3);
+		b = luaL_checknumber(L, 4);
 	}
+	if((ok = get_pixel(&pixel, name, r, g, b)))
+		XSetWindowBorder(dpy, w, pixel);
 	lua_pushboolean(L, ok);
 	return 1;
 }
