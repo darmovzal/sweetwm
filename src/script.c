@@ -8,7 +8,7 @@ lua_State * L;
 
 void lua_pushwindow(lua_State * L, Window w){
 	*((Window *) lua_newuserdata(L, sizeof(Window))) = w;
-	luaL_newmetatable(L, META_WINDOW);
+	luaL_getmetatable(L, META_WINDOW);
 	lua_setmetatable(L, -2);
 }
 
