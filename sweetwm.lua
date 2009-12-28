@@ -3,8 +3,8 @@ sweetwm.events = {
 		local x, y, w, h = sweetwm.get_window_size(win)
 		win:move(x, y)
 		win:resize(w, h)
-		win:set_border_width(5)
-		win:set_border_color("rgb:ff/00/00")
+		win:set_border_width(2)
+		win:set_border_color(1, 1, 0)
 		win:map()
 	end,
 	configure_request = function(win, x, y, w, h)
