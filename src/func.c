@@ -17,7 +17,7 @@ Screen * get_screen(int num){
 	return ret;
 }
 
-LFUNC(move_window){
+LFUNC(move){
 	Window w;
 	int x, y;
 	
@@ -29,7 +29,7 @@ LFUNC(move_window){
 	return 0;
 }
 
-LFUNC(resize_window){
+LFUNC(resize){
 	Window w;
 	int width, height;
 	
@@ -105,7 +105,7 @@ LFUNC(get_root_window){
 	return 1;
 }
 
-LFUNC(map_window){
+LFUNC(map){
 	Window w;
 	
 	w = lua_checkwindow(L, 1);
@@ -288,25 +288,28 @@ LFUNC(get_screen_size){
 }
 
 void func_reg(void){
-	lua_newtable(L);
-	lua_pushvalue(L, -1);
-	lua_setfield(L, LUA_GLOBALSINDEX, "sweetwm");
 #define REG(N) lua_pushcfunction(L, lua_##N); lua_setfield(L, -2, #N);
-	REG(move_window)
-	REG(resize_window)
+	lua_newtable(L);
+	REG(get_screen_count)
+	REG(get_root_window)
+	REG(get_screen_size)
+	lua_setfield(L, LUA_GLOBALSINDEX, "sweetwm");
+	
+	luaL_newmetatable(L, META_WINDOW);
+	lua_newtable(L);
+	REG(move)
+	REG(resize)
 	REG(set_border_width)
 	REG(set_border_color)
 	REG(query_tree)
-	REG(get_screen_count)
-	REG(get_root_window)
-	REG(map_window)
+	REG(map)
 	REG(attributes)
 	REG(properties)
 	REG(wm_hints)
 	REG(size_hints)
-	REG(get_screen_size)
-#undef REG
+	lua_setfield(L, -2, "__index");
 	lua_pop(L, 1);
+#undef REG
 }
 
 
